@@ -96,9 +96,9 @@ public class AutoRotate extends OpMode {
          */
 
         /**
-         * Finding our current heading is trivial using a method, but finding our desired heading is a little bit more work. I've attached a diagram
-         * that is hopefully of some help:
-         *
+         * Finding our current heading is trivial using a method, but finding our desired heading is a little bit more work. I've drawn a diagram
+         * that is hopefully of some help in the media/ folder.
+    
          * If we can establish a triangle from our robot to the blue hive, we can use tangent (specifically tangent inverse) to find the angle!
          */
 
