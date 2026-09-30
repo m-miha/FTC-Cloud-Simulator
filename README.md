@@ -6,12 +6,11 @@
 ## First run
 
 1. After making the codespace, wait for the container build. It installs Java 21, Android command-line tools,
-   AdvantageScope, and a browser-accessible desktop. Initial downloads take several minutes.
-
-2. In the command palette, choose **Tasks: Run Task → FTC: Set up Android SDK
+   AdvantageScope, and a browser-accessible desktop. Initial downloads take several minutes, you should only have to wait this long once.
+2. In the top search bar, choose **Tasks: Run Task → FTC: Set up Android SDK
    (first run)**. Review and accept the SDK licenses in the terminal (hit y for all of them); the task then
-   installs the SDK packages. This should only need to be done once for each session..
-3. When ready to test your code, press **Ctrl+Shift+B**, or run **FTC: Run simulator** from the task menu.
+   installs the SDK packages. This should only need to be done once for each session.
+3. When ready to test your code, go to **Tasks: Run Task → FTC: Run simulator** from the top search bar.
    The first build downloads Maven dependencies and will take longer.
 4. Open the **Ports** panel, find **6080**, and click its globe icon. Click **Connect** in noVNC;
 5. In the Driver Station, select the desired OpMode, then **INIT**. Once the simulator is connected, press **START**.
