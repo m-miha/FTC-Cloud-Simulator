@@ -14,7 +14,7 @@ import org.firstinspires.ftc.teamcode.PedroPathing.Constants;
 /**
  * WELCOME TO THE AUTO ROTATE EXERCISE!! o(╹ڡ╹ )
  * Much of this code is written for you! The parts that need completion are labeled as such
- * with TODO: like this!
+ * with TODO: like this! 0s are used as placeholders.
  * Please reach out if there's any questions.
  * @Author michael-mih on GitHub.
  * @Email mjm2442@colubmia.edu
@@ -102,19 +102,19 @@ public class AutoRotate extends OpMode {
          * If we can establish a triangle from our robot to the blue hive, we can use tangent (specifically tangent inverse) to find the angle!
          */
 
-        //TODO: define the x and y distance between our target pose (the blue hive) and the robot. You'll need the .getX() and .getY() methods
-        //TODO: that belong to Pose objects.
-        double deltaX =
-        double deltaY =
+        // TODO: define the x and y distance between our target pose (the blue hive) and the robot. You'll need the .getX() and .getY() methods
+        // TODO: that belong to Pose objects.
+        double deltaX = 0;
+        double deltaY = 0;
 
         //TODO: with the x and y legnths of our triangle, find what our desired angle is in order to face the blue hive.
         //TODO: you'll need Math.atan2(y, x) (an inverse tangent method)
         //TODO: which you can read about here: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#atan2-double-double-
-        double desiredAngle =
+        double desiredAngle = 0;
 
         //TODO: calculate our error, the difference between our desired angle and our current heading. you'll need the .getHeading() method that belongs
         //TODO: to pose objects.
-        double error =
+        double error = 0;
 
         /**
          * This code ensures we never rotate the long way around the unit circle to get to our angle. I can explain it more in person if there's interest.
@@ -133,10 +133,10 @@ public class AutoRotate extends OpMode {
          *
          */
         //TODO calculate our proportional term, which is our constant kP multiplied by our error.
-        double pTerm = kP * error;
+        double pTerm = 0;
 
         double dTerm;
-        dTerm = 0; //this is set in case the derivative term isn't calculated later
+        dTerm = 0; //this is set in case the derivative term isn't calculated later, leave as is if not doing the challenge.
         double currentRuntime = getRuntime();
 
         /**
