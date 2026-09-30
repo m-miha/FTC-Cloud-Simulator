@@ -5,15 +5,79 @@ import json
 import os
 from pathlib import Path
 import signal
+import shutil
 import socket
 import subprocess
 import sys
 import time
+import threading
+import hashlib
+import io
+import urllib.request
+import uuid
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = ROOT / "TeamCode/build/cloud/runtime.json"
 EXAMPLE = "org.firstinspires.ftc.teamcode.SimulateCodeBloodedDecode"
 LAUNCHER = Path("/opt/ftc/Programs/advantagescope/AdvantageScope.exe")
+FIELD_ID = "FTC:2026-2027 Field"
+POSE_KEY = "RealOutputs/Mecanum/position ftc coords (m)"
+FIELD_ASSET = "Field2d_20262027FTCFieldV1"
+FIELD_SHA256 = "41215ccc90e604a80f6b8f48daf5f0a9151cdbe7a6b64f970f35773a033849c3"
+
+
+def ensure_field_asset(folder):
+    destination = folder / "userAssets" / FIELD_ASSET
+    if (destination / "config.json").is_file() and (destination / "image.png").is_file():
+        return
+    url = ("https://github.com/Mechanical-Advantage/AdvantageScopeAssets/releases/"
+           f"download/default-assets-v2/{FIELD_ASSET}.zip")
+    print("Installing the 2026-2027 FTC 2D field…", flush=True)
+    with urllib.request.urlopen(url, timeout=60) as response:
+        data = response.read()
+    if hashlib.sha256(data).hexdigest() != FIELD_SHA256:
+        raise RuntimeError("2026-2027 field download checksum mismatch")
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        # Copy only the two known assets; never extract arbitrary archive paths.
+        content = {}
+        for name in ("config.json", "image.png"):
+            matches = [item for item in archive.namelist() if item.split('/')[-1] == name]
+            if len(matches) != 1:
+                raise RuntimeError(f"Field archive must contain exactly one {name}")
+            content[name] = archive.read(matches[0])
+    destination.mkdir(parents=True, exist_ok=True)
+    for name, data in content.items():
+        (destination / name).write_bytes(data)
+
+
+def configure_2d_layout(folder):
+    # Called by the desktop wrapper AFTER FTCodeSim writes its default 3D layout.
+    # Reuse our tab on subsequent runs and preserve the user's other tabs.
+    paths = list(folder.glob("state-*.json"))
+    updated = False
+    for path in paths:
+        state = json.loads(path.read_text())
+        if not state.get("hubs"):
+            continue
+        tabs = state["hubs"][0]["state"]["tabs"]
+        tab = next((item for item in tabs["tabs"] if item.get("title") == "2D FTCodeSim"), None)
+        if tab is None:
+            tab = {"title": "2D FTCodeSim", "controllerUUID": uuid.uuid4().hex,
+                   "renderer": None, "controlsHeight": 160}
+            tabs["tabs"].append(tab)
+        tab.update(type=2, controller={
+            "field": FIELD_ID, "orientation": 0, "size": "medium",
+            "sources": [{"type": "robot", "logKey": POSE_KEY, "logType": "Pose2d",
+                         "visible": True, "options": {"bumpers": ""}}]
+        })
+        tabs["selected"] = tabs["tabs"].index(tab)
+        temporary = path.with_suffix(".cloud-tmp")
+        temporary.write_text(json.dumps(state, indent=2) + "\n")
+        temporary.replace(path)
+        updated = True
+    if not updated:
+        raise RuntimeError("No initialized AdvantageScope layout to configure")
 
 
 def stop_group(process):
@@ -34,12 +98,85 @@ def stop_group(process):
     process.wait()
 
 
-def run(command, **kwargs):
+def run(command, auto_connect=False, **kwargs):
     process = subprocess.Popen(command, start_new_session=True, **kwargs)
+    stop = threading.Event()
+    connector = None
     try:
+        if auto_connect:
+            connector = threading.Thread(target=connect_advantagescope, args=(stop,), daemon=True)
+            connector.start()
         return process.wait()
     finally:
+        stop.set()
+        if connector is not None:
+            connector.join(timeout=8)
         stop_group(process)
+
+
+def rlog_listening(net_folder=Path("/proc/net")):
+    # Inspect listeners without opening (and consuming) a simulator connection.
+    for name in ("tcp", "tcp6"):
+        try:
+            lines = (net_folder / name).read_text().splitlines()[1:]
+        except FileNotFoundError:
+            continue
+        for line in lines:
+            columns = line.split()
+            if len(columns) >= 4 and columns[3] == "0A" and columns[1].endswith(":16A8"):
+                return True  # 5800, LISTEN
+    return False
+
+
+def desktop_command(*arguments):
+    return subprocess.check_output(arguments, text=True, stderr=subprocess.STDOUT, timeout=3).strip()
+
+
+def scope_windows():
+    windows = []
+    for line in desktop_command("wmctrl", "-l").splitlines():
+        columns = line.split(None, 3)
+        if len(columns) == 4 and columns[3].endswith("AdvantageScope"):
+            windows.append((columns[0], columns[3]))
+    return windows
+
+
+def connect_advantagescope(stop):
+    """Invoke the verified v26.0.2 simulator shortcut once, after OpMode INIT."""
+    fallback = "Use File > Connect to Simulator > RLOG Server manually."
+    try:
+        if not shutil.which("xdotool"):
+            raise RuntimeError("xdotool is missing; install it or rebuild the container")
+        while not stop.wait(0.5):
+            if not rlog_listening():
+                continue
+            windows = scope_windows()
+            if not windows:
+                continue
+            window, title = windows[0]
+            if "127.0.0.1" in title:
+                return  # Already connecting/connected; don't reset its data.
+            previous = desktop_command("xdotool", "getactivewindow")
+            try:
+                desktop_command("xdotool", "windowactivate", "--sync", window)
+                if stop.is_set():
+                    return
+                desktop_command("xdotool", "key", "--clearmodifiers", "ctrl+shift+k")
+                deadline = time.monotonic() + 10
+                while not stop.wait(0.25):
+                    if any(w == window and "127.0.0.1" in title for w, title in scope_windows()):
+                        print("AdvantageScope simulator connection started. You can START the OpMode.", flush=True)
+                        return
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError("AdvantageScope did not acknowledge the connection shortcut")
+            finally:
+                try:
+                    desktop_command("xdotool", "windowactivate", previous)
+                except (OSError, subprocess.SubprocessError):
+                    pass  # The previous window may have closed during shutdown.
+            return
+    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+        print(f"Automatic connection: {error}. {fallback}", flush=True)
 
 
 def valid_state(folder):
@@ -56,6 +193,7 @@ def valid_state(folder):
 
 def prepare_advantagescope(folder):
     folder.mkdir(parents=True, exist_ok=True)
+    ensure_field_asset(folder)
     prefs_path = folder / "prefs.json"
     if not valid_state(folder) or not prefs_path.exists():
         print("Initializing AdvantageScope's desktop configuration…", flush=True)
@@ -73,7 +211,7 @@ def prepare_advantagescope(folder):
     prefs = json.loads(prefs_path.read_text())
     prefs.update(liveMode="rlog", robotAddress="127.0.0.1", rlogPort=5800,
                  field3dModeAc="low-power", field3dModeBattery="low-power",
-                 field3dAntialiasing=False)
+                 field3dAntialiasing=False, coordinateSystem="automatic")
     prefs_path.write_text(json.dumps(prefs, indent=2) + "\n")
 
 
@@ -90,7 +228,13 @@ def ensure_ports_available():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--compile-only", action="store_true")
+    parser.add_argument("--manual-connect", action="store_true", help="Disable desktop shortcut automation")
+    parser.add_argument("--configure-layout", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.configure_layout:
+        config_home = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")))
+        configure_2d_layout(config_home / "AdvantageScope")
+        return 0
     if sys.platform != "linux":
         parser.error("Run this launcher inside the Linux dev container / Codespace.")
     import fcntl
@@ -120,12 +264,16 @@ def main():
         runtime = json.loads(RUNTIME.read_text())
         java = str(Path(os.environ["JAVA_HOME"]) / "bin/java")
         properties = [f"-D{key}={value}" for key, value in runtime["systemProperties"].items()]
-        print("Open the private desktop on port 6080. Select an OpMode, INIT, then START.\n"
-              "In AdvantageScope: File → Connect to Simulator → RLOG Server.\n"
+        print("Open the private desktop on port 6080. Select an OpMode and INIT.\n"
+              + ("In AdvantageScope: File > Connect to Simulator > RLOG Server.\n" if args.manual_connect else
+                 "AdvantageScope will connect automatically after INIT; wait for confirmation, then START.\n") +
               "Close the Driver Station or press Ctrl+C here before editing and running again.", flush=True)
+        simulation_env = os.environ.copy()
+        simulation_env["FTC_CLOUD_LAYOUT_SCRIPT"] = str(Path(__file__).resolve())
         return run([java, "-Xmx1536m", *properties, "-Djava.awt.headless=false",
                     "-cp", runtime["classpath"], "org.junit.runner.JUnitCore", EXAMPLE],
-                   cwd=runtime["workingDirectory"])
+                   cwd=runtime["workingDirectory"], auto_connect=not args.manual_connect,
+                   env=simulation_env)
 
 
 if __name__ == "__main__":

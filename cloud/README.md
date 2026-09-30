@@ -29,10 +29,12 @@ No local Android Studio, Java, AdvantageScope, or robot is required.
 6. Open the **Ports** panel, find **6080**, and click its globe icon. Keep its
    visibility **Private**. Click **Connect** in noVNC; no additional desktop password
    is needed because Codespaces authenticates the private forwarded port.
-7. In the Driver Station, select **Cloud Drive**, then **INIT**, then **START**.
-   In AdvantageScope, choose **File → Connect to Simulator → RLOG Server**.
-   Its **3D FTCodeSim** tab is configured by the existing example, including the
-   DECODE field and robot model. The RLOG stream is available after OpMode INIT.
+7. In the Driver Station, select **Cloud Drive**, then **INIT**. Wait for the terminal
+   to report **AdvantageScope simulator connection started**, then press **START**.
+   The launcher connects AdvantageScope automatically and restores desktop focus.
+   The selected **2D FTCodeSim** tab shows **FTC:2026-2027 Field**, using
+   `RealOutputs/Mecanum/position ftc coords (m)` as its robot Pose2d source.
+   The RLOG stream is available after OpMode INIT.
 8. Focus the Driver Station window inside the streamed desktop. Use **W/A/S/D**
    to drive/strafe and **J/L** to turn. Browser USB gamepads are not forwarded to
    the cloud JVM; use the keyboard. Release keys before switching browser tabs.
@@ -93,6 +95,21 @@ require additional devices need matching simulated hardware added in
 [SimulateCodeBloodedDecode.java](../TeamCode/src/test/java/org/firstinspires/ftc/teamcode/SimulateCodeBloodedDecode.java).
 The whole TeamCode module compiles, so a syntax error in any Java source can block a run.
 
+The launcher downloads the official 2026-2027 FTC 2D field with a pinned checksum.
+After FTCodeSim writes its layout, the desktop wrapper selects **2D FTCodeSim**
+with the FTC-coordinate position pose in meters. Existing tabs remain available.
+This changes the visualization; the Java example's DECODE physics configuration
+is unchanged. The launcher sets RLOG preferences, waits
+for the RLOG listener after INIT, and sends AdvantageScope's **Ctrl+Shift+K**
+simulator shortcut. It checks for the localhost connection title and restores
+focus. Wait for this step before driving. AdvantageScope handles reconnection
+after that. Use `python3 cloud/run.py --manual-connect` to disable the shortcut.
+An existing Codespace needs `sudo apt-get update && sudo apt-get install -y xdotool`
+after pulling this change, or a container rebuild. New container builds include it.
+When updating an existing Codespace, install the current desktop wrapper with
+`sudo install -m 755 cloud/advantagescope.sh /opt/ftc/Programs/advantagescope/AdvantageScope.exe`
+or rebuild the container, so layout setup runs before AdvantageScope opens.
+
 ## Troubleshooting and verification
 
 - **SDK/license error:** rerun the SDK setup task. A local Windows `local.properties`
@@ -100,8 +117,9 @@ The whole TeamCode module compiles, so a syntax error in any Java source can blo
 - **Empty desktop:** check the build terminal for errors; windows open after compilation.
 - **AdvantageScope initialization timeout:** open the desktop, dismiss startup dialogs,
   and retry. Its log is `~/.config/AdvantageScope/cloud-launch.log`.
-- **No live field:** INIT an OpMode, connect to the RLOG simulator, and select the
-  **3D FTCodeSim** tab. The connection is to cloud-local `127.0.0.1:5800`.
+- **No live field:** INIT an OpMode and check the terminal for automatic-connection
+  errors. If necessary use **File → Connect to Simulator → RLOG Server** and select
+  **2D FTCodeSim**. The connection is to cloud-local `127.0.0.1:5800`.
   On first launch AdvantageScope may need to download its field assets.
 - **Port occupied:** close the previous simulation; run only one simulation per Codespace.
 - **Out of memory/slow graphics:** close other tasks; try a 4-core machine (higher cost).

@@ -5,7 +5,7 @@ RUN test "$(dpkg --print-architecture)" = amd64 \
     && apt-get update && apt-get install -y --no-install-recommends \
        curl unzip python3 ca-certificates libgtk-3-0 libnss3 libasound2 \
        libgbm1 libxss1 libxtst6 libx11-xcb1 libgl1-mesa-dri libglu1-mesa \
-       libxkbcommon0 libnotify4 libsecret-1-0 libsdl2-2.0-0 wmctrl \
+       libxkbcommon0 libnotify4 libsecret-1-0 libsdl2-2.0-0 wmctrl xdotool \
     && apt-get clean
 
 # Match the repository's JetBrains Java 21 daemon criteria.
