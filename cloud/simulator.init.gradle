@@ -1,0 +1,21 @@
+// Opt-in cloud task: compile the existing example without executing Gradle's test worker.
+// FTCodeSim discovers OpModes by scanning java.class.path; a direct JVM receives
+// the complete Android unit-test classpath instead of Gradle's worker bootstrap jar.
+gradle.projectsEvaluated {
+    def team = gradle.rootProject.project(':TeamCode')
+    def unitTest = team.tasks.named('testDebugUnitTest').get()
+    team.tasks.register('cloudSimPrepare') {
+        group = 'simulation'
+        description = 'Compile TeamCode and export the simulator runtime classpath'
+        dependsOn { unitTest.taskDependencies.getDependencies(unitTest) }
+        doLast {
+            def destination = new File(team.layout.buildDirectory.get().asFile, 'cloud/runtime.json')
+            destination.parentFile.mkdirs()
+            destination.text = groovy.json.JsonOutput.toJson([
+                classpath: (unitTest.testClassesDirs + unitTest.classpath).asPath,
+                workingDirectory: team.projectDir.absolutePath,
+                systemProperties: unitTest.systemProperties
+            ])
+        }
+    }
+}
