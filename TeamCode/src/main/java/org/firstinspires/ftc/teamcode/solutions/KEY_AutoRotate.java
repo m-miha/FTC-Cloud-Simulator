@@ -8,9 +8,9 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.teamcode.PedroPathing.Constants;
 
-@TeleOp(name = "Exercise 1 Key", group = "Iterative OpMode")
+@TeleOp(name = "KEY - Auto Rotate Exercise", group = "Iterative OpMode")
 
-public class RSS_exercise1_KEY extends OpMode {
+public class KEY_AutoRotate extends OpMode {
 
     private DcMotor leftDriveB = null;
     private DcMotor leftDriveF = null;
@@ -32,7 +32,7 @@ public class RSS_exercise1_KEY extends OpMode {
     @Override
     public void init() {
         follower = Constants.createFollower(hardwareMap);
-        follower.setStartingPose(new Pose(10, 10, Math.PI));
+        follower.setStartingPose(new Pose(10, 10, 0));
 
 
         leftDriveB = hardwareMap.get(DcMotor.class, "lr");
@@ -77,7 +77,7 @@ public class RSS_exercise1_KEY extends OpMode {
         double dTerm = ((error - lastError) / dT) * kD;
 
         double rotate = pTerm + dTerm;
-        drive(rotate);
+        drive(-rotate);
 
         lastError = error;
         lastRuntime = currentRuntime;

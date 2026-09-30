@@ -8,7 +8,24 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.teamcode.PedroPathing.Constants;
 
-@TeleOp(name = "Auto Rotate Exercise", group = "Iterative OpMode")
+@TeleOp(name = "Autorotate Exercise", group = "Iterative OpMode")
+
+
+/**
+ * WELCOME TO THE AUTO ROTATE EXERCISE!! o(╹ڡ╹ )
+ * Much of this code is written for you! The parts that need completion are labeled as such
+ * with TODO: like this!
+ * Please reach out if there's any questions.
+ * @Author michael-mih on GitHub.
+ * @Email mjm2442@colubmia.edu
+ */
+
+/**
+ * For this exercise, you'll be implementing an autorotation system in TeleOp. In this case,
+ * the robot should always be oriented towards the blue hives regardless of where the driver
+ * is. This will involve doing some basic trigonometry, and a basic
+ * proportional derivative controller. The derivative part is an optional challenge.
+ */
 
 public class AutoRotate extends OpMode {
 
@@ -17,9 +34,23 @@ public class AutoRotate extends OpMode {
     private DcMotor rightDriveB = null;
     private DcMotor rightDriveF = null;
 
+
+    /**
+     * Our Follower object tracks our rotation and heading on the field. This information is
+     * represented as a Pose, which consists of an X, Y, and heading value (rotation) in radians.
+     */
     private Follower follower;
+
+    /**
+     * For simplicity's sake, there will only be one pose we want to lock on to, which is the center of the two
+     * blue hives listed below as targetPose. You can imagine how a more sophisticated program may track both hive sides
+     * individually.
+     */
     private final Pose targetPose = new Pose(78, 73, 0); //heading arbitrary
 
+    /**
+     * PID constants that we'd tune on a real robot.
+     */
     private final double kP = 0.2;
     private final double kD = 0.0001;
 
@@ -32,7 +63,7 @@ public class AutoRotate extends OpMode {
     @Override
     public void init() {
         follower = Constants.createFollower(hardwareMap);
-        follower.setStartingPose(new Pose(10, 10, Math.PI));
+        follower.setStartingPose(new Pose(10, 10, 0));
 
 
         leftDriveB = hardwareMap.get(DcMotor.class, "lr");
@@ -55,29 +86,74 @@ public class AutoRotate extends OpMode {
 
     @Override
     public void loop() {
+
         follower.update();
         Pose pose = follower.getPose();
 
-        double deltaX = targetPose.getX() - pose.getX();
-        double deltaY = targetPose.getY() - pose.getY();
-        double desiredAngle = Math.atan2(deltaY, deltaX);
+        /**
+         * We want to ask: How far does my robot have to rotate in order to face the blue hive? In order to do this, we need to take the difference between
+         * the angle our robot should be facing, and the angle our robot is currently facing.
+         */
 
-        double error = desiredAngle - pose.getHeading();
+        /**
+         * Finding our current heading is trivial using a method, but finding our desired heading is a little bit more work. I've attached a diagram
+         * that is hopefully of some help:
+         *
+         * If we can establish a triangle from our robot to the blue hive, we can use tangent (specifically tangent inverse) to find the angle!
+         */
 
+        //TODO: define the x and y distance between our target pose (the blue hive) and the robot. You'll need the .getX() and .getY() methods
+        //TODO: that belong to Pose objects.
+        double deltaX =
+        double deltaY =
+
+        //TODO: with the x and y legnths of our triangle, find what our desired angle is in order to face the blue hive.
+        //TODO: you'll need Math.atan2(y, x) (an inverse tangent method)
+        //TODO: which you can read about here: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#atan2-double-double-
+        double desiredAngle =
+
+        //TODO: calculate our error, the difference between our desired angle and our current heading. you'll need the .getHeading() method that belongs
+        //TODO: to pose objects.
+        double error =
+
+        /**
+         * This code ensures we never rotate the long way around the unit circle to get to our angle. I can explain it more in person if there's interest.
+          */
         if (error > Math.PI) {
             error -= 2 * Math.PI;
         } else if (error < -Math.PI) {
             error += 2 * Math.PI;
         }
 
+
+        /**
+         * Now that we know our error (the difference between our desired heading and our current heading), we need to use that error to actually apply
+         * power to our motors.
+         * We'll do this through a proportional derivative controller.
+         *
+         */
+        //TODO calculate our proportional term, which is our constant kP multiplied by our error.
         double pTerm = kP * error;
 
+        double dTerm;
+        dTerm = 0; //this is set in case the derivative term isn't calculated later
         double currentRuntime = getRuntime();
-        double dT = currentRuntime - lastRuntime;
-        double dTerm = ((error - lastError) / dT) * kD;
+
+        /**
+         * The derivative term calculates the rate of change of our error and multiplies that with our kD constant.
+         * This is commonly thought of as "predicting" based on how the error is changing in order to minimize overshooting.
+         * Here's a youtube short that gives a brief rundown. This sort of thing is popular with the youth nowadays I think:
+         * https://www.youtube.com/shorts/PGK-RXA8Ye8
+         * In this example, our "x" is time (note the currentRuntime and lastRuntime variables) and
+         * our "f(x)" is our error (note the error and lastError variables).
+         * TODO: Uncomment and fill in if you want to attempt to add the Derivative term!
+         * double dT =
+           double dTerm = kD *
+         **/
+
 
         double rotate = pTerm + dTerm;
-        drive(rotate);
+        drive(-rotate);
 
         lastError = error;
         lastRuntime = currentRuntime;
@@ -87,8 +163,16 @@ public class AutoRotate extends OpMode {
         telemetry.addData("Heading (rad)", pose.getHeading());
         telemetry.update();
 
+        /**
+         * Congrats! Your robot should be drivable using WASD while always facing the blue hive!
+         */
     }
 
+    /**
+     * A method to drive the robot field-centric with our calculated rotation power. You shouldn't have to
+     * touch this.
+     * @param rotate our calculated rotation power
+     */
     public void drive(double rotate) {
         double fieldX = gamepad1.left_stick_x;   // right on field
         double fieldY = -gamepad1.left_stick_y;  // forward on field
