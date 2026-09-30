@@ -1,11 +1,10 @@
-package org.firstinspires.ftc.teamcode.mihaley;
+package org.firstinspires.ftc.teamcode.solutions;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.PedroPathing.Constants;
 
