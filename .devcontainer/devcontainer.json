@@ -1,0 +1,26 @@
+{
+  "name": "FTC Cloud Simulator",
+  "build": { "dockerfile": "Dockerfile", "context": ".." },
+  "features": {
+    "ghcr.io/devcontainers/features/desktop-lite:1": {
+      "password": "noPassword",
+      "webPort": "6080",
+      "vncPort": "5901"
+    }
+  },
+  "remoteUser": "vscode",
+  "hostRequirements": { "cpus": 2, "memory": "8gb", "storage": "32gb" },
+  "runArgs": ["--shm-size=1g"],
+  "forwardPorts": [6080],
+  "portsAttributes": {
+    "6080": { "label": "FTC desktop — Driver Station + AdvantageScope", "onAutoForward": "notify" }
+  },
+  "otherPortsAttributes": { "onAutoForward": "ignore" },
+  "customizations": {
+    "vscode": {
+      "extensions": ["redhat.java"],
+      "settings": { "java.jdt.ls.java.home": "/opt/ftc/jdk", "files.autoSave": "afterDelay" }
+    },
+    "codespaces": { "openFiles": ["cloud/README.md", "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/cloud/CloudDrive.java"] }
+  }
+}
