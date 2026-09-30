@@ -31,6 +31,9 @@ RUN curl -fL --retry 3 "https://github.com/Mechanical-Advantage/AdvantageScope/r
     && echo 'd5ec30f285f9a241fca97d384887070d36c8a70bd8ee17fdb92c933663ee3396  /tmp/ascope.AppImage' | sha256sum -c - \
     && chmod +x /tmp/ascope.AppImage \
     && cd /opt/ftc && /tmp/ascope.AppImage --appimage-extract >/dev/null \
+    && chmod -R a+rX /opt/ftc/squashfs-root \
+    && chmod a+x /opt/ftc/squashfs-root/AppRun \
+    && runuser -u vscode -- test -x /opt/ftc/squashfs-root/AppRun \
     && rm /tmp/ascope.AppImage
 
 COPY cloud/advantagescope.sh /opt/ftc/Programs/advantagescope/AdvantageScope.exe
