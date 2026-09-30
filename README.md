@@ -1,6 +1,6 @@
 # FTC OpMode Simulation in the Cloud via Codespaces 
 
-[![Open in GitHub Codespaces]](https://github.com/codespaces/new/michael-mih/FTC-Cloud-Simulator?quickstart=1)
+[Click here to make your codespace!!!](https://github.com/codespaces/new/michael-mih/FTC-Cloud-Simulator?quickstart=1)
 
 
 ## First run
