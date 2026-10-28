@@ -121,7 +121,7 @@ or rebuild the container, so layout setup runs before AdvantageScope opens.
   errors. If necessary use **File → Connect to Simulator → RLOG Server** and select
   **2D FTCodeSim**. The connection is to cloud-local `127.0.0.1:5800`.
   On first launch AdvantageScope may need to download its field assets.
-- **Port occupied:** close the previous simulation; run only one simulation per Codespace.
+- **Rerunning:** the launcher stops the previous simulation from this workspace and releases its ports automatically. If a port is occupied by an unrelated process, stop that process or change its port, then retry.
 - **Out of memory/slow graphics:** close other tasks; try a 4-core machine (higher cost).
 - **Check without opening windows:** run **FTC: Check compilation**.
 

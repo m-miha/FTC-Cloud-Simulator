@@ -215,6 +215,47 @@ def prepare_advantagescope(folder):
     prefs_path.write_text(json.dumps(prefs, indent=2) + "\n")
 
 
+def previous_simulations():
+    """Find only standalone simulator JVMs belonging to this workspace."""
+    for entry in Path('/proc').iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            command = (entry / 'cmdline').read_bytes().split(b'\0')
+            if (Path(os.fsdecode(command[0])).name == 'java'
+                    and b'org.junit.runner.JUnitCore' in command
+                    and EXAMPLE.encode() in command
+                    and (entry / 'cwd').resolve() == ROOT / 'TeamCode'):
+                yield int(entry.name)
+        except (OSError, IndexError):
+            continue  # A process may exit while /proc is being inspected.
+
+
+def restart_previous_simulation():
+    pids = set(previous_simulations())
+    if not pids:
+        return
+    print('Stopping the previous simulation before rerunning…', flush=True)
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        for pid in pids.intersection(previous_simulations()):
+            try:
+                # run() creates a dedicated session. Never kill a shared shell group.
+                if os.getpgid(pid) == pid:
+                    os.killpg(pid, sig)
+                else:
+                    os.kill(pid, sig)
+            except ProcessLookupError:
+                pass
+        deadline = time.monotonic() + 5
+        while pids.intersection(previous_simulations()):
+            if time.monotonic() >= deadline:
+                break
+            time.sleep(0.1)
+        else:
+            return
+    raise RuntimeError('The previous simulator could not be stopped.')
+
+
 def ensure_ports_available():
     for port in (8080, 5800):
         with socket.socket() as probe:
@@ -222,7 +263,8 @@ def ensure_ports_available():
             try:
                 probe.bind(("0.0.0.0", port))
             except OSError as error:
-                raise RuntimeError(f"Port {port} is occupied. Close the previous simulator before running again.") from error
+                raise RuntimeError(f"Port {port} is occupied by another process, not a recognized simulator "
+                                   "from this workspace. Stop that process or change its port.") from error
 
 
 def main():
@@ -246,10 +288,23 @@ def main():
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            raise RuntimeError("A simulator build/run is already active in this workspace.") from None
+            if args.compile_only:
+                raise RuntimeError("A simulator build/run is already active in this workspace.") from None
+            restart_previous_simulation()
+            # The old launcher also needs time to finish desktop cleanup.
+            deadline = time.monotonic() + 15
+            while True:
+                try:
+                    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError("A simulator build/run is still active in this workspace.") from None
+                    time.sleep(0.1)
         if not args.compile_only:
             if not os.environ.get("DISPLAY") or not LAUNCHER.exists():
                 raise RuntimeError("Cloud desktop unavailable. Reopen the repository in its dev container.")
+            restart_previous_simulation()
             ensure_ports_available()
         print("Compiling TeamCode and the existing simulation example…", flush=True)
         result = run(["bash", "gradlew", "--no-daemon", "--max-workers=2", "--console=plain",
@@ -267,7 +322,7 @@ def main():
         print("Open the private desktop on port 6080. Select an OpMode and INIT.\n"
               + ("In AdvantageScope: File > Connect to Simulator > RLOG Server.\n" if args.manual_connect else
                  "AdvantageScope will connect automatically after INIT; wait for confirmation, then START.\n") +
-              "Close the Driver Station or press Ctrl+C here before editing and running again.", flush=True)
+              "Rerunning this launcher restarts the previous simulation. Press Ctrl+C to stop it.", flush=True)
         simulation_env = os.environ.copy()
         simulation_env["FTC_CLOUD_LAYOUT_SCRIPT"] = str(Path(__file__).resolve())
         return run([java, "-Xmx1536m", *properties, "-Djava.awt.headless=false",

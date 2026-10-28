@@ -1,6 +1,10 @@
 import importlib.util
 import json
 from pathlib import Path
+import signal
+import socket
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import Mock, patch, call
@@ -11,6 +15,54 @@ spec.loader.exec_module(launcher)
 
 
 class ConfigurationTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == 'linux', 'Uses Linux /proc process discovery')
+    def test_restart_releases_listener_and_preserves_other_workspace(self):
+        script = ('import socket, time; '
+                  's = socket.socket(); s.bind(("127.0.0.1", 0)); s.listen(); '
+                  'print(s.getsockname()[1], flush=True); time.sleep(60)')
+        command = ['java', '-c', script, 'org.junit.runner.JUnitCore', launcher.EXAMPLE]
+        with tempfile.TemporaryDirectory() as other_workspace:
+            processes = []
+            try:
+                for cwd in (launcher.ROOT / 'TeamCode', other_workspace):
+                    processes.append(subprocess.Popen(
+                        command, executable=sys.executable, cwd=cwd,
+                        start_new_session=True, stdout=subprocess.PIPE, text=True))
+                port = int(processes[0].stdout.readline())
+                processes[1].stdout.readline()
+                with socket.socket() as probe:
+                    with self.assertRaises(OSError):
+                        probe.bind(('127.0.0.1', port))
+                launcher.restart_previous_simulation()
+                processes[0].wait(timeout=2)
+                self.assertIsNone(processes[1].poll())
+                with socket.socket() as probe:
+                    probe.bind(('127.0.0.1', port))
+                launcher.restart_previous_simulation()  # No previous run is also safe.
+            finally:
+                for process in processes:
+                    launcher.stop_group(process)
+                    process.stdout.close()
+
+    def test_restart_escalates_when_previous_simulation_ignores_term(self):
+        with patch.object(launcher, 'previous_simulations', side_effect=[
+                [123], [123], [123], [123], []]), \
+             patch.object(launcher.os, 'getpgid', return_value=123), \
+             patch.object(launcher.os, 'killpg') as kill, \
+             patch.object(launcher.time, 'monotonic', side_effect=[0, 6, 6]):
+            launcher.restart_previous_simulation()
+        self.assertEqual(kill.call_args_list, [call(123, signal.SIGTERM), call(123, signal.SIGKILL)])
+
+    def test_busy_unrelated_port_is_reported_without_killing_processes(self):
+        with patch.object(launcher.socket, 'socket') as socket_factory, \
+             patch.object(launcher.os, 'kill') as kill, \
+             patch.object(launcher.os, 'killpg') as killpg:
+            socket_factory.return_value.__enter__.return_value.bind.side_effect = OSError('busy')
+            with self.assertRaisesRegex(RuntimeError, 'another process'):
+                launcher.ensure_ports_available()
+            kill.assert_not_called()
+            killpg.assert_not_called()
+
     def test_2d_layout_selects_requested_field_and_pose_without_duplicates(self):
         with tempfile.TemporaryDirectory() as temporary:
             folder = Path(temporary)
