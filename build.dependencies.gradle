@@ -25,13 +25,14 @@ dependencies {
     implementation 'org.firstinspires.ftc:FtcCommon:11.2.1'
     implementation 'org.firstinspires.ftc:Vision:11.2.1'
     implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation 'com.pedropathing:ftc:2.1.2'
-    implementation 'com.pedropathing:telemetry:1.0.0'
-    implementation 'com.bylazar:fullpanels:1.0.12'
+    implementation 'com.pedropathing:revhub:3.0.2'
+    implementation 'com.pedropathing:tuning:1.0.2'
     implementation 'com.pedropathing:ivy:1.0.0'
 
     //FTCSim
-    testImplementation("org.codeblooded.ftcodesim:ftcodesim:v0.1.0-alpha.1")
+    testImplementation("org.codeblooded.ftcodesim:ftcodesim:v0.1.0-alpha.1") {
+        // Unused by FTCodeSim; its strict Sloth 0.2.4 pin conflicts with AutoTune's 0.3.2.
+        exclude group: 'com.acmerobotics.slothboard', module: 'dashboard'
+    }
     testImplementation "junit:junit:4.13.2"
 }
-

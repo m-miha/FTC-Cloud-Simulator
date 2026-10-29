@@ -29,4 +29,21 @@ android {
 
 dependencies {
     implementation project(':FtcRobotController')
+    testImplementation('org.nanohttpd:nanohttpd-websocket:2.3.1') {
+        exclude module: 'nanohttpd' // FTC RobotCore already supplies NanoHTTPD.
+    }
+}
+
+// Android AAR assets are not on a desktop unit-test classpath. Package AutoTune's
+// published UI as test resources; the Android APK still uses the original AAR.
+configurations { autoTuneAssets }
+dependencies { autoTuneAssets 'com.pedropathing:tuning:1.0.2@aar' }
+def desktopAssets = tasks.register('desktopAutoTuneAssets', Sync) {
+    from { configurations.autoTuneAssets.collect { zipTree(it) } }
+    include 'assets/pedro/**'
+    into layout.buildDirectory.dir('generated/autotuneResources')
+}
+android.sourceSets.test.resources.srcDir(layout.buildDirectory.dir('generated/autotuneResources').get().asFile)
+tasks.matching { it.name == 'processDebugUnitTestJavaRes' || it.name == 'processReleaseUnitTestJavaRes' }.configureEach {
+    dependsOn desktopAssets
 }

@@ -22,20 +22,22 @@ No local Android Studio, Java, AdvantageScope, or robot is required.
 3. In the command palette, choose **Tasks: Run Task → FTC: Set up Android SDK
    (first run)**. Review and accept the SDK licenses in the terminal; the task then
    installs the SDK packages. Repeat this after a container rebuild.
-4. Open [CloudDrive.java](../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/cloud/CloudDrive.java).
-   Change `SPEED`, or edit another OpMode under `TeamCode/src/main/java`.
+4. Open [Tuning.java](../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/PedroPathing/Tuning.java),
+   or edit an exercise OpMode under `TeamCode/src/main/java`.
 5. Save, then press **Ctrl+Shift+B**, or run **FTC: Run simulator** from the task menu.
    Compiler errors appear in the terminal. The first build downloads Maven dependencies.
 6. Open the **Ports** panel, find **6080**, and click its globe icon. Keep its
    visibility **Private**. Click **Connect** in noVNC; no additional desktop password
    is needed because Codespaces authenticates the private forwarded port.
-7. In the Driver Station, select **Cloud Drive**, then **INIT**. Wait for the terminal
+7. In the Driver Station, select **Pedro AutoTune**, then **INIT**. Wait for the terminal
    to report **AdvantageScope simulator connection started**, then press **START**.
    The launcher connects AdvantageScope automatically and restores desktop focus.
    The selected **2D FTCodeSim** tab shows **FTC:2026-2027 Field**, using
    `RealOutputs/Mecanum/position ftc coords (m)` as its robot Pose2d source.
    The RLOG stream is available after OpMode INIT.
-8. Focus the Driver Station window inside the streamed desktop. Use **W/A/S/D**
+8. Open private port **10158** and select **Driving and Localization**. Click
+   Continue to start the procedure, then focus the Driver Station window inside
+   the streamed desktop. Use **W/A/S/D**
    to drive/strafe and **J/L** to turn. Browser USB gamepads are not forwarded to
    the cloud JVM; use the keyboard. Release keys before switching browser tabs.
 
@@ -47,6 +49,66 @@ Use noVNC's scaling/fullscreen controls if the two windows do not fit.
 Edits persist while the Codespace exists. Commit and push to your own branch/fork
 or download your files before deleting it. Simulation recordings appear under
 `TeamCode/sim-logs/`; download them from the editor's file explorer to keep them.
+
+## Pedro 3 and AutoTune
+
+This project uses **Pedro 3.0.2** and **AutoTune 1.0.2**, the latest stable versions
+checked on 2026-10-28. AutoTune 1.0.3-beta.1 is a prerelease. The older selectable
+Pedro 2 tuning menu has been replaced by `@Tuner` factories in `Tuning.java`.
+
+1. Run **FTC: Run simulator**, select **Pedro AutoTune**, INIT, then START.
+2. In Codespaces, open **Ports ? 10158 ? Open in Browser**, keeping visibility
+   **Private**. Rebuild an existing container to apply `forwardPorts`, or add 10158
+   manually in the Ports panel. Locally, use `http://localhost:10158`.
+3. Choose **Mecanum Procedure**. The simulator names are **lf / rf / lr / rr** for
+   front left / front right / back left / back right. Continue spins one motor at
+   25% power; click the browser's Stop button, then answer the direction question.
+   The Java result contains a Pedro 3 `MecanumConfig` to copy into `Constants.java`.
+4. **Driving and Localization** passes the Driver Station keyboard/gamepads to
+   the tuning OpMode. Browser Stop finishes the test. Driver Station STOP or
+   disconnecting the tuning browser cancels the active procedure and zeros motors.
+
+The published AutoTune 1.0.2 artifact contains the procedure framework and UI but
+not the `MecanumTuner`/`Tests` implementations shown in the current Pedro docs.
+This repository provides its own Mecanum and driving/localization procedures on
+that framework. It does not supply the documented automatic Foresight tuners.
+The Foresight values in `Constants.createForesightConfig()` are simulation starting
+values, not a completed tune or a direct conversion of Pedro 2 gains.
+
+FTCodeSim alpha does not implement motor direction changes or wheel animations;
+its motors use logical wheel powers. The Mecanum procedure exercises hardware
+selection, motor commands and result generation here, but direction observations
+and physical robot calibration must be done on a real robot. Pinpoint pose and
+velocity reads are adapted to Pedro 3's individual sensor getters.
+
+### Desktop integration
+
+FTCodeSim bypasses Android's event-loop startup and does not execute the SDK's
+LinearOpMode lifecycle. The test-only `DesktopAutoTune` adapter starts the official
+UI, registers this project's factories, and runs nested tuning OpModes while the
+**Pedro AutoTune** host owns the Driver Station. It shares that host's hardware,
+telemetry and gamepads. The adapter is not included in the Android APK; robot
+builds use AutoTune's original Android lifecycle.
+
+HTTP and the upstream AutoTune WebSocket protocol share **10158** in simulation.
+The adapter rewrites the published UI's `ws://hostname:12649` endpoint to the
+current origin's `/ws`, using `wss` when accessed through Codespaces HTTPS. No
+second public port or separate WebSocket authentication is needed.
+
+The desktop classpath deliberately puts a small replacement of AutoTune's
+`Procedure` class ahead of its AAR. Only the OpMode manager boundary is changed;
+the protocol and session implementation come from the pinned dependency. The
+SDK access helper is pinned to FTC **11.2.1**. Re-run the integration checks when
+updating either dependency. AutoTune assets are extracted from its AAR into test
+resources by `desktopAutoTuneAssets`; never copy the inspection/download folders
+into the project.
+
+After **FTC: Check compilation**, run `python3 cloud/check_runtime.py` (Java 21).
+It tests actual HTTP and WebSocket traffic, all four motor steps and generated
+results, gamepad input, STOP/disconnect cleanup, restart, Pinpoint reads, and a
+Pedro 3 path command without opening desktop windows. Run it with the simulator
+closed so port 10158 is available. Browser rendering and Codespaces' external
+proxy still need a check in a Codespace.
 
 ## Hosting and cost
 
@@ -126,8 +188,8 @@ or rebuild the container, so layout setup runs before AdvantageScope opens.
 - **Check without opening windows:** run **FTC: Check compilation**.
 
 Deployment acceptance check: create a fresh Codespace, accept SDK licenses, run
-Cloud Drive, confirm WASD changes the robot pose in AdvantageScope, close the
-Driver Station, change SPEED, and rerun. Confirm Ctrl+C closes both windows and a
+Pedro AutoTune, open Driving and Localization, confirm WASD changes the robot pose
+in AdvantageScope, close the Driver Station, edit a tuning factory, and rerun. Confirm Ctrl+C closes both windows and a
 second run works. This desktop interaction must be checked on the Linux host;
 static checks or compilation on Windows do not validate cloud rendering.
 

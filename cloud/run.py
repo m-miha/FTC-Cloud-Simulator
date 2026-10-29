@@ -257,7 +257,7 @@ def restart_previous_simulation():
 
 
 def ensure_ports_available():
-    for port in (8080, 5800):
+    for port in (8080, 5800, 10158):
         with socket.socket() as probe:
             probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:

@@ -44,6 +44,7 @@ class ConfigurationTests(unittest.TestCase):
                     launcher.stop_group(process)
                     process.stdout.close()
 
+    @unittest.skipUnless(sys.platform == 'linux', 'Uses POSIX process groups and SIGKILL')
     def test_restart_escalates_when_previous_simulation_ignores_term(self):
         with patch.object(launcher, 'previous_simulations', side_effect=[
                 [123], [123], [123], [123], []]), \
@@ -56,12 +57,21 @@ class ConfigurationTests(unittest.TestCase):
     def test_busy_unrelated_port_is_reported_without_killing_processes(self):
         with patch.object(launcher.socket, 'socket') as socket_factory, \
              patch.object(launcher.os, 'kill') as kill, \
-             patch.object(launcher.os, 'killpg') as killpg:
+             patch.object(launcher.os, 'killpg', create=True) as killpg:
             socket_factory.return_value.__enter__.return_value.bind.side_effect = OSError('busy')
             with self.assertRaisesRegex(RuntimeError, 'another process'):
                 launcher.ensure_ports_available()
             kill.assert_not_called()
             killpg.assert_not_called()
+
+    def test_autotune_port_conflict_is_reported(self):
+        def bind(address):
+            if address[1] == 10158:
+                raise OSError('busy')
+        with patch.object(launcher.socket, 'socket') as socket_factory:
+            socket_factory.return_value.__enter__.return_value.bind.side_effect = bind
+            with self.assertRaisesRegex(RuntimeError, 'Port 10158 is occupied'):
+                launcher.ensure_ports_available()
 
     def test_2d_layout_selects_requested_field_and_pose_without_duplicates(self):
         with tempfile.TemporaryDirectory() as temporary:

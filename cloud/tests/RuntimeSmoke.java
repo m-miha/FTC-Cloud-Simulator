@@ -5,8 +5,8 @@ public class RuntimeSmoke {
     public static void main(String[] args) throws Exception {
         boolean found = new OpModeRegister().getOpModes().stream().anyMatch(
             opMode -> opMode.getClass().getName().equals(
-                "org.firstinspires.ftc.teamcode.cloud.CloudDrive"));
-        if (!found) throw new AssertionError("Cloud Drive missing from OpMode discovery");
+                "org.firstinspires.ftc.teamcode.cloud.PedroAutoTune"));
+        if (!found) throw new AssertionError("Pedro AutoTune missing from OpMode discovery");
         ClassLoader loader = RuntimeSmoke.class.getClassLoader();
         for (String resource : new String[]{"assets/DriverStationWindow-all.jar", "assets/robot-models"}) {
             if (loader.getResource(resource) == null) throw new AssertionError("Missing " + resource);

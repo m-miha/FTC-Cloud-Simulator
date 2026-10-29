@@ -1,18 +1,18 @@
 package org.firstinspires.ftc.teamcode.PedroPathing.AutoCode; // make sure this aligns with class location
 
 import com.pedropathing.follower.Follower;
-import com.pedropathing.geometry.BezierCurve;
-import com.pedropathing.geometry.BezierLine;
-import com.pedropathing.geometry.Pose;
+import static com.pedropathing.api.Paths.*;
+import com.pedropathing.ivy.behaviors.EndCondition;
+import com.pedropathing.math.Pose;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.Scheduler;
-import com.pedropathing.paths.PathChain;
+import com.pedropathing.paths.Path;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import static com.pedropathing.ivy.Scheduler.schedule;
-import static com.pedropathing.ivy.pedro.PedroCommands.*;
+
 import static com.pedropathing.ivy.groups.Groups.*;
 
 import org.firstinspires.ftc.teamcode.PedroPathing.Constants;
@@ -27,65 +27,41 @@ public class AutoCodeMethods {
     private static final Pose pickup2Pose = new Pose(12, 60, Math.toRadians(180)); // Middle (Second Set) of Artifacts from the Spike Mark.
     private static final Pose pickup3Pose = new Pose(12, 36, Math.toRadians(180)); // Lowest (Third Set) of Artifacts from the Spike Mark.
     private static final Pose endPose = new Pose (60, 105); // Final Pose of our robot, off the starting line
-    //defining our PathChains
-    private static PathChain scorePreload;
-    private static PathChain grabPickup1;
-    private static PathChain scorePickup1;
-    private static PathChain grabPickup2;
-    private static PathChain scorePickup2;
-    private static PathChain grabPickup3;
-    private static PathChain scorePickup3;
-    private static PathChain leave;
+    //defining our Paths
+    private static Path scorePreload;
+    private static Path grabPickup1;
+    private static Path scorePickup1;
+    private static Path grabPickup2;
+    private static Path scorePickup2;
+    private static Path grabPickup3;
+    private static Path scorePickup3;
+    private static Path leave;
 
     public static void buildPaths(Follower follower) {
-        scorePreload = follower.pathBuilder()
-                .addPath(new BezierLine(startPose, scorePose))
-                .setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading())
-                .build();
+        scorePreload = line(startPose, scorePose).linear(startPose.heading(), scorePose.heading());
 
 
-        /* This is our grabPickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
-        grabPickup1 = follower.pathBuilder()
-                .addPath(new BezierLine(scorePose, pickup1Pose))
-                .setLinearHeadingInterpolation(scorePose.getHeading(), pickup1Pose.getHeading())
-                .build();
+        /* This is our grabPickup1 Path. We are using a single path with a BezierLine, which is a straight line. */
+        grabPickup1 = line(scorePose, pickup1Pose).linear(scorePose.heading(), pickup1Pose.heading());
 
-        /* This is our scorePickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
-        scorePickup1 = follower.pathBuilder()
-                .addPath(new BezierLine(pickup1Pose, scorePose))
-                .setLinearHeadingInterpolation(pickup1Pose.getHeading(), scorePose.getHeading())
-                .build();
+        /* This is our scorePickup1 Path. We are using a single path with a BezierLine, which is a straight line. */
+        scorePickup1 = line(pickup1Pose, scorePose).linear(pickup1Pose.heading(), scorePose.heading());
 
-        /* This is our grabPickup2 PathChain. We are using a single path with a BezierCurve (curved line). */
-        grabPickup2 = follower.pathBuilder()
-                .addPath(new BezierCurve(scorePose, new Pose(60, 54), pickup2Pose))
-                .setLinearHeadingInterpolation(scorePose.getHeading(), pickup2Pose.getHeading())
-                .build();
+        /* This is our grabPickup2 Path. We are using a single path with a BezierCurve (curved line). */
+        grabPickup2 = curve(scorePose, new Pose(60, 54), pickup2Pose).linear(scorePose.heading(), pickup2Pose.heading());
 
-        /* This is our scorePickup2 PathChain. We are using a single path with a BezierCurve (curved line). */
-        scorePickup2 = follower.pathBuilder()
-                .addPath(new BezierCurve(pickup2Pose, new Pose(60, 54), scorePose))
-                .setLinearHeadingInterpolation(pickup2Pose.getHeading(), scorePose.getHeading())
-                .build();
+        /* This is our scorePickup2 Path. We are using a single path with a BezierCurve (curved line). */
+        scorePickup2 = curve(pickup2Pose, new Pose(60, 54), scorePose).linear(pickup2Pose.heading(), scorePose.heading());
 
-        /* This is our grabPickup3 PathChain. We are using a single path with a BezierCurve (curved line). */
-        grabPickup3 = follower.pathBuilder()
-                .addPath(new BezierCurve(scorePose, new Pose(60, 30), pickup3Pose))
-                .setLinearHeadingInterpolation(scorePose.getHeading(), pickup3Pose.getHeading())
-                .build();
+        /* This is our grabPickup3 Path. We are using a single path with a BezierCurve (curved line). */
+        grabPickup3 = curve(scorePose, new Pose(60, 30), pickup3Pose).linear(scorePose.heading(), pickup3Pose.heading());
 
-        /* This is our scorePickup3 PathChain. We are using a single path with a BezierCurve (curved line). */
-        scorePickup3 = follower.pathBuilder()
-                .addPath(new BezierCurve(pickup3Pose,new Pose(60, 30), scorePose))
-                .setLinearHeadingInterpolation(pickup3Pose.getHeading(), scorePose.getHeading())
-                .build();
+        /* This is our scorePickup3 Path. We are using a single path with a BezierCurve (curved line). */
+        scorePickup3 = curve(pickup3Pose,new Pose(60, 30), scorePose).linear(pickup3Pose.heading(), scorePose.heading());
 
-        /* This is our leave PathChain. We are using a single path using a BezierLine (straight line).
+        /* This is our leave Path. We are using a single path using a BezierLine (straight line).
          * We use Constant Interpolation here instead of Linear*/
-        leave = follower.pathBuilder()
-                .addPath(new BezierLine(scorePose, endPose))
-                .setConstantHeadingInterpolation(scorePose.getHeading())
-                .build();
+        leave = line(scorePose, endPose).constant(scorePose.heading());
     }
     public static Command autoRoutine(Follower follower) {
         return sequential(
@@ -108,26 +84,21 @@ public class AutoCodeMethods {
         );
     }
 
-    /**@Override
-    public void init() {
-        Scheduler.reset();
-        follower = Constants.createFollower(hardwareMap);
-        buildPaths();
-        follower.setStartingPose(startPose);
+    // Ivy 1.0's bundled PedroCommands target Pedro 2. Use its generic command API.
+    private static Command follow(Follower follower, Path path) {
+        return follow(follower, path, true);
     }
 
-    @Override
-    public void start(){
-        schedule(autoRoutine());
+    private static Command follow(Follower follower, Path path, boolean holdEnd) {
+        return Command.build().setStart(() -> {
+            follower.holdEnd.set(holdEnd);
+            follower.follow(path);
+        }).setDone(() -> !follower.following() && !follower.isBusy())
+          .setEnd(reason -> {
+              if (reason == EndCondition.INTERRUPTED) {
+                  follower.stop();
+                  follower.drivetrain.stop();
+              }
+          });
     }
-    @Override
-    public void loop() {
-        follower.update();
-        Scheduler.execute();
-        // Feedback to Driver Hub for debugging
-        telemetry.addData("x", follower.getPose().getX());
-        telemetry.addData("y", follower.getPose().getY());
-        telemetry.addData("heading", follower.getPose().getHeading());
-        telemetry.update();
-    }**/
 }

@@ -1,7 +1,7 @@
 package org.firstinspires.ftc.teamcode.exercises;
 
 import com.pedropathing.follower.Follower;
-import com.pedropathing.geometry.Pose;
+import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -63,7 +63,7 @@ public class AutoRotate extends OpMode {
     @Override
     public void init() {
         follower = Constants.createFollower(hardwareMap);
-        follower.setStartingPose(new Pose(10, 10, 0));
+        follower.setPose(new Pose(10, 10, 0));
 
 
         leftDriveB = hardwareMap.get(DcMotor.class, "lr");
@@ -87,8 +87,8 @@ public class AutoRotate extends OpMode {
     @Override
     public void loop() {
 
-        follower.update();
-        Pose pose = follower.getPose();
+        follower.localizer.update();
+        Pose pose = follower.pose();
 
         /**
          * We want to ask: How far does my robot have to rotate in order to face the blue hive? In order to do this, we need to take the difference between
@@ -102,7 +102,7 @@ public class AutoRotate extends OpMode {
          * If we can establish a triangle from our robot to the blue hive, we can use tangent (specifically tangent inverse) to find the angle!
          */
 
-        // TODO: define the x and y distance between our target pose (the blue hive) and the robot. You'll need the .getX() and .getY() methods
+        // TODO: define the x and y distance between our target pose (the blue hive) and the robot. You'll need the .x() and .y() methods
         // TODO: that belong to Pose objects.
         double deltaX = 0;
         double deltaY = 0;
@@ -112,7 +112,7 @@ public class AutoRotate extends OpMode {
         //TODO: which you can read about here: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#atan2-double-double-
         double desiredAngle = 0;
 
-        //TODO: calculate our error, the difference between our desired angle and our current heading. you'll need the .getHeading() method that belongs
+        //TODO: calculate our error, the difference between our desired angle and our current heading. you'll need the .heading() method that belongs
         //TODO: to pose objects.
         double error = 0;
 
@@ -158,9 +158,9 @@ public class AutoRotate extends OpMode {
         lastError = error;
         lastRuntime = currentRuntime;
 
-        telemetry.addData("X (in)", pose.getX());
-        telemetry.addData("Y (in)", pose.getY());
-        telemetry.addData("Heading (rad)", pose.getHeading());
+        telemetry.addData("X (in)", pose.x());
+        telemetry.addData("Y (in)", pose.y());
+        telemetry.addData("Heading (rad)", pose.heading());
         telemetry.update();
 
         /**
@@ -176,7 +176,7 @@ public class AutoRotate extends OpMode {
     public void drive(double rotate) {
         double fieldX = gamepad1.left_stick_x;   // right on field
         double fieldY = -gamepad1.left_stick_y;  // forward on field
-        double heading = follower.getPose().getHeading();
+        double heading = follower.pose().heading();
 
 
         double drive  = fieldX * Math.cos(heading)

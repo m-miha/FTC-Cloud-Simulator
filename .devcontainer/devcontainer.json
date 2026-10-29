@@ -11,9 +11,10 @@
   "remoteUser": "vscode",
   "hostRequirements": { "cpus": 2, "memory": "8gb", "storage": "32gb" },
   "runArgs": ["--shm-size=1g"],
-  "forwardPorts": [6080],
+  "forwardPorts": [6080, 10158],
   "portsAttributes": {
-    "6080": { "label": "FTC desktop — Driver Station + AdvantageScope", "onAutoForward": "notify" }
+    "6080": { "label": "FTC desktop — Driver Station + AdvantageScope", "onAutoForward": "notify" },
+    "10158": { "label": "Pedro AutoTune", "onAutoForward": "notify" }
   },
   "otherPortsAttributes": { "onAutoForward": "ignore" },
   "customizations": {
@@ -21,6 +22,6 @@
       "extensions": ["redhat.java"],
       "settings": { "java.jdt.ls.java.home": "/opt/ftc/jdk", "files.autoSave": "afterDelay" }
     },
-    "codespaces": { "openFiles": ["cloud/README.md", "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/cloud/CloudDrive.java"] }
+    "codespaces": { "openFiles": ["cloud/README.md", "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/PedroPathing/Tuning.java"] }
   }
 }

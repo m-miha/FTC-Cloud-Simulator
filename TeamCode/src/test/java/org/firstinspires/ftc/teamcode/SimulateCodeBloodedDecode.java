@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode;
 import org.codeblooded.ftcodesim.ascope.SeasonField;
 import org.codeblooded.ftcodesim.ascope.SourceType;
 import org.codeblooded.ftcodesim.ascope.boundaries.RobotGeometry;
-import org.codeblooded.ftcodesim.hardware.devices.SimPinpoint;
 import org.codeblooded.ftcodesim.hardware.drivetrain.SimulatedDrivetrain;
 import org.codeblooded.ftcodesim.input.DefaultKeybinds;
 import org.codeblooded.ftcodesim.hardware.SimHardwareMap;
@@ -13,11 +12,33 @@ import org.codeblooded.ftcodesim.simulator.FTCodeSim;
 import org.codeblooded.ftcodesim.simulator.SimConfig;
 import org.junit.Test;
 import java.io.IOException;
+import com.pedropathing.tuning.autotune.DesktopAutoTune;
+import org.firstinspires.ftc.teamcode.cloud.PedroSimPinpoint;
 
 
 public class SimulateCodeBloodedDecode {
     @Test
     public void test() throws IOException, InterruptedException {
+        SimHardwareMap simHardwareMap = createHardwareMap();
+        SimConfig simConfig = new SimConfig();
+        simConfig.gamepad1Keybinds = new DefaultKeybinds();
+        simConfig.gamepad2Keybinds = new DefaultKeybinds();
+        simConfig.simHardwareMap = simHardwareMap;
+        simConfig.loopTimeMs = 20;
+        simConfig.field = SeasonField.DECODE;
+        simConfig.autoConfigureAscope = true;
+
+        try (DesktopAutoTune autoTune = new DesktopAutoTune()) {
+            FTCodeSim sim = new FTCodeSim(simConfig);
+            try {
+                sim.run();
+            } finally {
+                sim.close();
+            }
+        }
+    }
+
+    public static SimHardwareMap createHardwareMap() {
         SimHardwareMap simHardwareMap = new SimHardwareMap();
 
         SimMecanumConfig config = new SimMecanumConfig();
@@ -46,18 +67,8 @@ public class SimulateCodeBloodedDecode {
         SimulatedDrivetrain drivetrain = new SimulatedMecanum(config);
 
         simHardwareMap.register(drivetrain);
-        simHardwareMap.register("pinpoint", new SimPinpoint(drivetrain));
+        simHardwareMap.register("pinpoint", new PedroSimPinpoint(drivetrain));
 
-        SimConfig simConfig = new SimConfig();
-        simConfig.gamepad1Keybinds = new DefaultKeybinds();
-        simConfig.gamepad2Keybinds = new DefaultKeybinds();
-        simConfig.simHardwareMap = simHardwareMap;
-        simConfig.loopTimeMs = 20;
-        simConfig.field = SeasonField.DECODE;
-        simConfig.autoConfigureAscope = true;
-
-        FTCodeSim sim = new FTCodeSim(simConfig);
-
-        sim.run();
+        return simHardwareMap;
     }
 }
